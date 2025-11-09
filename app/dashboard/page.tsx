@@ -4,7 +4,7 @@ import { useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
-// import { ChartsSection } from "@/components/dashboard/charts-section";
+import { ChartsSection } from "@/components/dashboard/charts-section";
 import { TradesTable } from "@/components/dashboard/trades-table";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
 import { UploadArea } from "@/components/dashboard/upload-area";
@@ -52,32 +52,48 @@ export default function DashboardPage() {
 
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
+    console.log('📁 Starting file upload:', file.name, file.type, file.size);
+    
     try {
       const formData = new FormData();
       formData.append('file', file);
       
+      console.log('🚀 Sending request to /api/parse-report...');
       const response = await fetch('/api/parse-report', {
         method: 'POST',
         body: formData,
       });
       
+      console.log('📥 Response status:', response.status, response.statusText);
+      
       if (!response.ok) {
-        throw new Error('Failed to parse report');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Parse error:', errorData);
+        throw new Error(errorData.error || 'Failed to parse report');
       }
       
       const data = await response.json();
+      console.log('✅ Parsed data received:', data);
+      console.log('📊 Number of trades:', data.trades?.length);
+      
       setTrades(data.trades);
       
       // Generate insights
+      console.log('🧠 Generating insights for', data.trades.length, 'trades...');
       const insightsResponse = await fetch('/api/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trades: data.trades }),
       });
       
+      console.log('📥 Insights response status:', insightsResponse.status);
+      
       if (insightsResponse.ok) {
         const insightsData = await insightsResponse.json();
+        console.log('✅ Insights generated:', insightsData);
         setInsights(insightsData);
+      } else {
+        console.warn('⚠️ Insights generation failed but continuing...');
       }
       
       // Save to recent uploads
@@ -92,11 +108,13 @@ export default function DashboardPage() {
       }
       
       toast.success(`Successfully parsed ${data.trades.length} trades`);
+      console.log('🎉 Upload complete! Trades loaded into state.');
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('❌ Upload error:', error);
       toast.error('Failed to parse report. Please try again.');
     } finally {
       setIsLoading(false);
+      console.log('🏁 Upload process finished. Loading state:', false);
     }
   };
 
@@ -154,7 +172,7 @@ export default function DashboardPage() {
               
               <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                  {/* <ChartsSection trades={filteredTrades} /> */}
+                  <ChartsSection trades={filteredTrades} />
                   <TradesTable trades={filteredTrades} />
                 </div>
                 

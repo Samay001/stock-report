@@ -41,7 +41,7 @@ async function generateWithOpenAI(trades: Trade[]): Promise<InsightsResponse> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',

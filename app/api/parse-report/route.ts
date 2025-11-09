@@ -65,7 +65,7 @@ async function parseWithOpenAIVision(file: File): Promise<ParseReportResponse> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'user',
@@ -135,11 +135,16 @@ async function parseWithOpenAIVision(file: File): Promise<ParseReportResponse> {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🔵 API: parse-report endpoint called');
+  
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    
+    console.log('📁 API: File received:', file?.name, file?.type, file?.size);
 
     if (!file) {
+      console.error('❌ API: No file provided');
       return NextResponse.json(
         { error: 'No file provided' },
         { status: 400 }
@@ -149,31 +154,42 @@ export async function POST(request: NextRequest) {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
+      console.error('❌ API: Invalid file type:', file.type);
       return NextResponse.json(
         { error: 'Invalid file type. Please upload an image or PDF.' },
         { status: 400 }
       );
     }
+    
+    console.log('✅ API: File type valid');
 
     // Validate file size (10MB limit)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
+      console.error('❌ API: File too large:', file.size);
       return NextResponse.json(
         { error: 'File too large. Maximum size is 10MB.' },
         { status: 400 }
       );
     }
+    
+    console.log('✅ API: File size valid');
 
     let result: ParseReportResponse;
 
     try {
+      console.log('🤖 API: Attempting OpenAI Vision parsing...');
       // Try OpenAI Vision first
       result = await parseWithOpenAIVision(file);
+      console.log('✅ API: OpenAI Vision parsing successful');
     } catch (error) {
+      console.warn('⚠️ API: OpenAI Vision failed, using mock parser:', error);
       // Fallback to mock parsing (silent fallback for missing API key)
       result = await mockOCRParsing(file);
+      console.log('✅ API: Mock parsing completed');
     }
-
+    
+    console.log('📊 API: Returning', result.trades.length, 'trades');
     return NextResponse.json(result);
   } catch (error) {
     console.error('Parse report error:', error);
